@@ -213,7 +213,7 @@ run() {
     $FLINK_DIR/bin/stop-local.sh
   elif [ "START_SPARK" = "$OPERATION" ];
   then
-    cp $SPARK_DIR/conf/spark-env.sh.template $SPARK_HOME/conf/spark-env.sh
+    cp $SPARK_DIR/conf/spark-env.sh.template $SPARK_DIR/conf/spark-env.sh
     cat >> $SPARK_DIR/conf/spark-env.sh << EOL
       export SPARK_DIST_CLASSPATH=$($HADOOP_DIR/bin/hadoop --config $HADOOP_CONF_DIR classpath)
     EOL
