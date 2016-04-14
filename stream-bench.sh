@@ -16,14 +16,18 @@ REDIS_VERSION=${REDIS_VERSION:-"3.0.5"}
 SCALA_BIN_VERSION=${SCALA_BIN_VERSION:-"2.10"}
 SCALA_SUB_VERSION=${SCALA_SUB_VERSION:-"4"}
 STORM_VERSION=${STORM_VERSION:-"0.10.0"}
-FLINK_VERSION=${FLINK_VERSION:-"0.10.1"}
-SPARK_VERSION=${SPARK_VERSION:-"1.5.1"}
+FLINK_VERSION=${FLINK_VERSION:-"0.10.2"}
+SPARK_VERSION=${SPARK_VERSION:-"1.6.0"}
 
 STORM_DIR="apache-storm-$STORM_VERSION"
 REDIS_DIR="redis-$REDIS_VERSION"
 KAFKA_DIR="kafka_$SCALA_BIN_VERSION-$KAFKA_VERSION"
-FLINK_DIR="flink-$FLINK_VERSION"
-SPARK_DIR="spark-$SPARK_VERSION-bin-hadoop2.6"
+#FLINK_DIR="flink-$FLINK_VERSION"
+FLINK_DIR="../flink/build-target"
+#SPARK_DIR="spark-$SPARK_VERSION-bin-hadoop2.6"
+SPARK_DIR="../spark-1.6.0-bin-without-hadoop"
+HADOOP_DIR="../hadoop/hadoop-dist/target/hadoop-2.7.1"
+HADOOP_CONF_DIR="$HADOOP_DIR/etc/hadoop"
 
 #Get one of the closet apache mirrors
 APACHE_MIRROR=$(curl 'https://www.apache.org/dyn/closer.cgi' |   grep -o '<strong>[^<]*</strong>' |   sed 's/<[^>]*>//g' |   head -1)
@@ -154,12 +158,12 @@ run() {
     fetch_untar_file "$STORM_FILE" "$APACHE_MIRROR/storm/$STORM_DIR/$STORM_FILE"
 
     #Fetch Flink
-    FLINK_FILE="$FLINK_DIR-bin-hadoop27-scala_${SCALA_BIN_VERSION}.tgz"
-    fetch_untar_file "$FLINK_FILE" "$APACHE_MIRROR/flink/flink-$FLINK_VERSION/$FLINK_FILE"
+    #FLINK_FILE="$FLINK_DIR-bin-hadoop27-scala_${SCALA_BIN_VERSION}.tgz"
+    #fetch_untar_file "$FLINK_FILE" "$APACHE_MIRROR/flink/flink-$FLINK_VERSION/$FLINK_FILE"
 
     #Fetch Spark
-    SPARK_FILE="$SPARK_DIR.tgz"
-    fetch_untar_file "$SPARK_FILE" "$APACHE_MIRROR/spark/spark-$SPARK_VERSION/$SPARK_FILE"
+    #SPARK_FILE="$SPARK_DIR.tgz"
+    #fetch_untar_file "$SPARK_FILE" "$APACHE_MIRROR/spark/spark-$SPARK_VERSION/$SPARK_FILE"
 
   elif [ "START_ZK" = "$OPERATION" ];
   then
@@ -201,12 +205,18 @@ run() {
     rm -rf /tmp/kafka-logs/
   elif [ "START_FLINK" = "$OPERATION" ];
   then
+    cp $FLINK_DIR/conf/flink-conf.yaml.template $FLINK_DIR/conf/flink-conf.yaml
+    sed -i "/^# fs\.hdfs\.hadoopconf/c\fs.hdfs.hadoopconf: $HADOOP_CONF_DIR" $FLINK_DIR/conf/flink-conf.yaml
     start_if_needed org.apache.flink.runtime.jobmanager.JobManager Flink 1 $FLINK_DIR/bin/start-local.sh
   elif [ "STOP_FLINK" = "$OPERATION" ];
   then
     $FLINK_DIR/bin/stop-local.sh
   elif [ "START_SPARK" = "$OPERATION" ];
   then
+    cp $SPARK_DIR/conf/spark-env.sh.template $SPARK_HOME/conf/spark-env.sh
+    cat >> $SPARK_DIR/conf/spark-env.sh << EOL
+      export SPARK_DIST_CLASSPATH=$($HADOOP_DIR/bin/hadoop --config $HADOOP_CONF_DIR classpath)
+    EOL
     start_if_needed org.apache.spark.deploy.master.Master SparkMaster 5 $SPARK_DIR/sbin/start-master.sh -h localhost -p 7077
     start_if_needed org.apache.spark.deploy.worker.Worker SparkSlave 5 $SPARK_DIR/sbin/start-slave.sh spark://localhost:7077
   elif [ "STOP_SPARK" = "$OPERATION" ];
