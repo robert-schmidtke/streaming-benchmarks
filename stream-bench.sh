@@ -215,8 +215,8 @@ run() {
   then
     cp $SPARK_DIR/conf/spark-env.sh.template $SPARK_DIR/conf/spark-env.sh
     cat >> $SPARK_DIR/conf/spark-env.sh << EOL
-      export SPARK_DIST_CLASSPATH=$($HADOOP_DIR/bin/hadoop --config $HADOOP_CONF_DIR classpath)
-    EOL
+export SPARK_DIST_CLASSPATH=$($HADOOP_DIR/bin/hadoop --config $HADOOP_CONF_DIR classpath)
+EOL
     start_if_needed org.apache.spark.deploy.master.Master SparkMaster 5 $SPARK_DIR/sbin/start-master.sh -h localhost -p 7077
     start_if_needed org.apache.spark.deploy.worker.Worker SparkSlave 5 $SPARK_DIR/sbin/start-slave.sh spark://localhost:7077
   elif [ "STOP_SPARK" = "$OPERATION" ];
